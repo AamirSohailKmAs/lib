@@ -43,7 +43,7 @@
     closeNotification(this, null);
 
     var dialog = dialogDiv(this, template, options.bottom);
-    var closed = false, me = this;
+    var closed = true, me = this; /* kmars closed = false is default*/
     function close(newVal) {
       if (typeof newVal == 'string') {
         inp.value = newVal;
@@ -997,3 +997,16 @@
 
   CodeMirror.keyMap["default"]["Alt-G"] = "jumpToLine";
 });
+
+function removeDialog(KH){
+var dialog = document.getElementsByClassName("CodeMirror-dialog");
+var annotations = document.getElementsByClassName("CodeMirror-annotations");
+      while(dialog.length > 0){
+        dialog[0].parentNode.removeChild(dialog[0]);
+        
+      }
+	 while(annotations.length > 0){
+        annotations[0].parentNode.removeChild(annotations[0]);
+        
+      }
+}
