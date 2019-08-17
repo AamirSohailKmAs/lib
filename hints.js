@@ -815,7 +815,7 @@
     samp: s,
     script: {
       attrs: {
-        type: d+json", "text/ecmascript", "application/javascript", "application/x-javascript", "application/ecmascript", "application/x-json", "text/typescript", "application/typescript"],
+        type: ["text/javascript", "application/json", "application/ld+json", "text/ecmascript", "application/javascript", "application/x-javascript", "application/ecmascript", "application/x-json", "text/typescript", "application/typescript"],
         src: null,
         async: ["", "async"],
         defer: ["", "defer"],
