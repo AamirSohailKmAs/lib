@@ -251,9 +251,302 @@
     if (this.state.lint) startLinting(this);
   });
 });
-/*  */
-/*  */
-/*  */
-/*  */
-/*  */
-/*  */
+/* html-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+// Depends on htmlhint.js from http://htmlhint.com/js/htmlhint.js
+
+// declare global: HTMLHint
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"), require("htmlhint"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror", "htmlhint"], mod);
+  else // Plain browser env
+    mod(CodeMirror, window.HTMLHint);
+})(function(CodeMirror, HTMLHint) {
+  "use strict";
+
+  var defaultRules = {
+    "tagname-lowercase": true,
+    "attr-lowercase": true,
+    "attr-value-double-quotes": true,
+    "doctype-first": false,
+    "tag-pair": true,
+    "spec-char-escape": true,
+    "id-unique": true,
+    "src-not-empty": true,
+    "attr-no-duplication": true
+  };
+
+  CodeMirror.registerHelper("lint", "html", function(text, options) {
+    var found = [];
+    if (HTMLHint && !HTMLHint.verify) {
+      if(typeof HTMLHint.default !== 'undefined') {
+        HTMLHint = HTMLHint.default;
+      } else {
+        HTMLHint = HTMLHint.HTMLHint;
+      }
+    }
+    if (!HTMLHint) HTMLHint = window.HTMLHint;
+    if (!HTMLHint) {
+      if (window.console) {
+          window.console.error("Error: HTMLHint not found, not defined on window, or not available through define/require, CodeMirror HTML linting cannot run.");
+      }
+      return found;
+    }
+    var messages = HTMLHint.verify(text, options && options.rules || defaultRules);
+    for (var i = 0; i < messages.length; i++) {
+      var message = messages[i];
+      var startLine = message.line - 1, endLine = message.line - 1, startCol = message.col - 1, endCol = message.col;
+      found.push({
+        from: CodeMirror.Pos(startLine, startCol),
+        to: CodeMirror.Pos(endLine, endCol),
+        message: message.message,
+        severity : message.type
+      });
+    }
+    return found;
+  });
+});
+
+/* css-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+// Depends on csslint.js from https://github.com/stubbornella/csslint
+
+// declare global: CSSLint
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+"use strict";
+
+CodeMirror.registerHelper("lint", "css", function(text, options) {
+  var found = [];
+  if (!window.CSSLint) {
+    if (window.console) {
+        window.console.error("Error: window.CSSLint not defined, CodeMirror CSS linting cannot run.");
+    }
+    return found;
+  }
+  var results = CSSLint.verify(text, options), messages = results.messages, message = null;
+  for ( var i = 0; i < messages.length; i++) {
+    message = messages[i];
+    var startLine = message.line -1, endLine = message.line -1, startCol = message.col -1, endCol = message.col;
+    found.push({
+      from: CodeMirror.Pos(startLine, startCol),
+      to: CodeMirror.Pos(endLine, endCol),
+      message: message.message,
+      severity : message.type
+    });
+  }
+  return found;
+});
+
+});
+/* javascript-lint.js js-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+  "use strict";
+  // declare global: JSHINT
+
+  function validator(text, options) {
+    if (!window.JSHINT) {
+      if (window.console) {
+        window.console.error("Error: window.JSHINT not defined, CodeMirror JavaScript linting cannot run.");
+      }
+      return [];
+    }
+    if (!options.indent) // JSHint error.character actually is a column index, this fixes underlining on lines using tabs for indentation
+      options.indent = 1; // JSHint default value is 4
+    JSHINT(text, options, options.globals);
+    var errors = JSHINT.data().errors, result = [];
+    if (errors) parseErrors(errors, result);
+    return result;
+  }
+
+  CodeMirror.registerHelper("lint", "javascript", validator);
+
+  function parseErrors(errors, output) {
+    for ( var i = 0; i < errors.length; i++) {
+      var error = errors[i];
+      if (error) {
+        if (error.line <= 0) {
+          if (window.console) {
+            window.console.warn("Cannot display JSHint error (invalid line " + error.line + ")", error);
+          }
+          continue;
+        }
+
+        var start = error.character - 1, end = start + 1;
+        if (error.evidence) {
+          var index = error.evidence.substring(start).search(/.\b/);
+          if (index > -1) {
+            end += index;
+          }
+        }
+
+        // Convert to format expected by validation service
+        var hint = {
+          message: error.reason,
+          severity: error.code ? (error.code.startsWith('W') ? "warning" : "error") : "error",
+          from: CodeMirror.Pos(error.line - 1, start),
+          to: CodeMirror.Pos(error.line - 1, end)
+        };
+
+        output.push(hint);
+      }
+    }
+  }
+});
+
+/* json-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+// Depends on jsonlint.js from https://github.com/zaach/jsonlint
+
+// declare global: jsonlint
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+"use strict";
+
+CodeMirror.registerHelper("lint", "json", function(text) {
+  var found = [];
+  if (!window.jsonlint) {
+    if (window.console) {
+      window.console.error("Error: window.jsonlint not defined, CodeMirror JSON linting cannot run.");
+    }
+    return found;
+  }
+  // for jsonlint's web dist jsonlint is exported as an object with a single property parser, of which parseError
+  // is a subproperty
+  var jsonlint = window.jsonlint.parser || window.jsonlint
+  jsonlint.parseError = function(str, hash) {
+    var loc = hash.loc;
+    found.push({from: CodeMirror.Pos(loc.first_line - 1, loc.first_column),
+                to: CodeMirror.Pos(loc.last_line - 1, loc.last_column),
+                message: str});
+  };
+  try { jsonlint.parse(text); }
+  catch(e) {}
+  return found;
+});
+
+});
+
+/* coffeescript-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+// Depends on coffeelint.js from http://www.coffeelint.org/js/coffeelint.js
+
+// declare global: coffeelint
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+"use strict";
+
+CodeMirror.registerHelper("lint", "coffeescript", function(text) {
+  var found = [];
+  if (!window.coffeelint) {
+    if (window.console) {
+      window.console.error("Error: window.coffeelint not defined, CodeMirror CoffeeScript linting cannot run.");
+    }
+    return found;
+  }
+  var parseError = function(err) {
+    var loc = err.lineNumber;
+    found.push({from: CodeMirror.Pos(loc-1, 0),
+                to: CodeMirror.Pos(loc, 0),
+                severity: err.level,
+                message: err.message});
+  };
+  try {
+    var res = coffeelint.lint(text);
+    for(var i = 0; i < res.length; i++) {
+      parseError(res[i]);
+    }
+  } catch(e) {
+    found.push({from: CodeMirror.Pos(e.location.first_line, 0),
+                to: CodeMirror.Pos(e.location.last_line, e.location.last_column),
+                severity: 'error',
+                message: e.message});
+  }
+  return found;
+});
+
+});
+/* yaml-lint.js */
+// CodeMirror, copyright (c) by Marijn Haverbeke and others
+// Distributed under an MIT license: https://codemirror.net/LICENSE
+
+(function(mod) {
+  if (typeof exports == "object" && typeof module == "object") // CommonJS
+    mod(require("../../lib/codemirror"));
+  else if (typeof define == "function" && define.amd) // AMD
+    define(["../../lib/codemirror"], mod);
+  else // Plain browser env
+    mod(CodeMirror);
+})(function(CodeMirror) {
+"use strict";
+
+// Depends on js-yaml.js from https://github.com/nodeca/js-yaml
+
+// declare global: jsyaml
+
+CodeMirror.registerHelper("lint", "yaml", function(text) {
+  var found = [];
+  if (!window.jsyaml) {
+    if (window.console) {
+      window.console.error("Error: window.jsyaml not defined, CodeMirror YAML linting cannot run.");
+    }
+    return found;
+  }
+  try { jsyaml.loadAll(text); }
+  catch(e) {
+      var loc = e.mark,
+          // js-yaml YAMLException doesn't always provide an accurate lineno
+          // e.g., when there are multiple yaml docs
+          // ---
+          // ---
+          // foo:bar
+          from = loc ? CodeMirror.Pos(loc.line, loc.column) : CodeMirror.Pos(0, 0),
+          to = from;
+      found.push({ from: from, to: to, message: e.message });
+  }
+  return found;
+});
+
+});
